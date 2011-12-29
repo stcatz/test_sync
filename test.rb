@@ -7,8 +7,8 @@ require 'etc'
 # edit for your OS
 case `uname -s`
 when /^Linux/
-  $DEV = "/dev/hda9"
-  $QUOTAS = "/mnt/hda9/aquota.user"
+  $DEV = "/dev/sdb"
+  $QUOTAS = "/mnt/sdb/aquota.user"
 when /^SunOS/
   $DEV = "/quotas"
   $QUOTAS = "/quotas"
@@ -16,7 +16,7 @@ when /BSD/
   $DEV = "/mnt/test"
   $QUOTAS = "/mnt/test/quota.user"
 end
-
+p Quota::VERSION
 print("user id: ")
 uid = gets.chop
 if( uid =~ /\d+/ )

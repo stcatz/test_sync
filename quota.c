@@ -38,7 +38,7 @@
 #endif
 #ifdef HAVE_LINUX_QUOTA_H
 #  include <linux/quota.h>
-#  define uid_t qid_t
+#  define uid_t unsigned int//qid_t
 #  if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
 #    define dqblk if_dqblk
 #  else
@@ -152,6 +152,7 @@ get_uid(VALUE vuid, uid_t *uid, int *is_gid)
   else{
     rb_raise(rb_eTypeError, "An uid or gid is expected.");
   };
+  //printf("in get_uid, pass in : %d,%d,%d", vuid, *uid, *is_gid );
 };
 
 
@@ -160,15 +161,20 @@ static int
 rb_quotactl(int cmd, char *dev, VALUE vuid, caddr_t addr)
 {
   int is_gid;
-  uid_t uid;
-
+  uid_t uid=0;
+  
   get_uid(vuid, &uid, &is_gid);
-  printf("cmd = %d, dev = %s, uid = %d, gid? = %d\n", cmd, dev, uid, is_gid);
+  //Add for get kernel quota format, just a workaround
+  if( cmd == Q_QUOTAON )
+  {
+    uid = QFMT_VFS_V0;
+  };
+
   if( is_gid ){
-    return quotactl(QCMD(cmd,GRPQUOTA),dev,(uid_t)uid,addr);
+    return quotactl(QCMD(cmd,GRPQUOTA),dev,(uid_t)uid, addr);
   }
   else{
-    return quotactl(QCMD(cmd,USRQUOTA),dev,(uid_t)uid,addr);
+    return quotactl(QCMD(cmd,USRQUOTA),dev,(uid_t)uid, addr);
   };
 };
 #elif defined(USE_BSD_QUOTA) /* for *BSD */
@@ -358,7 +364,7 @@ rb_quota_getquota(VALUE self, VALUE dev, VALUE uid)
   if( rb_quotactl(Q_GETQUOTA,c_dev,uid,(caddr_t)(&c_dqb)) == -1 ){
     rb_sys_fail("quotactl");
   };
-
+  
   dqb = rb_diskquota_new(&c_dqb);
 
   return dqb;
@@ -382,6 +388,8 @@ rb_quota_quotaon(VALUE self, VALUE dev, VALUE quotas)
   char *c_dev = STR2CSTR(dev);
   char *c_quotas = STR2CSTR(quotas);
 
+  //printf(" in rb_quotaon: %s, %s, %d", c_dev, c_quotas, self );
+
   if( rb_quotactl(Q_QUOTAON,c_dev,Qnil,(caddr_t)c_quotas) == -1 ){
     rb_sys_fail("quotactl");
   };
@@ -394,7 +402,6 @@ rb_quota_setquota(VALUE self, VALUE dev, VALUE uid, VALUE dqb)
 {
   char *c_dev = STR2CSTR(dev);
   struct dqblk c_dqb;
-
   rb_diskquota_get(dqb, &c_dqb);
 
   if( rb_quotactl(Q_SETQUOTA,c_dev,uid,(caddr_t)(&c_dqb)) == -1 ){
@@ -473,7 +480,11 @@ Init_quota()
   rb_sDiskQuota = rb_struct_define("DiskQuota",
 				   "bhardlimit",
 				   "bsoftlimit",
+#if defined(HAVE_LINUX_QUOTA_H)
+           "curspace",
+#else
 				   "curblocks",
+#endif
 				   "ihardlimit",
 				   "isoftlimit",
 				   "curinodes",
@@ -492,6 +503,9 @@ Init_quota()
   DQ_ALIAS(curfiles=,   curinodes=);
   DQ_ALIAS(ftimelimit=, itimelimit=);
 #if defined(HAVE_LINUX_QUOTA_H)
+  DQ_ALIAS(curspace, curspace);
+  DQ_ALIAS(curspace=, curspace=);
+#else
   DQ_ALIAS(curspace, curblocks);
   DQ_ALIAS(curspace=, curblocks=);
 #endif
