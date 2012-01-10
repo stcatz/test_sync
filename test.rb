@@ -8,7 +8,7 @@ require 'etc'
 case `uname -s`
 when /^Linux/
   $DEV = "/dev/sdb"
-  $QUOTAS = "/mnt/sdb/aquota.user"
+  $QUOTAS = "/home/stcatz/sdb/aquota.user"
 when /^SunOS/
   $DEV = "/quotas"
   $QUOTAS = "/quotas"
@@ -47,6 +47,8 @@ softlimit = gets.to_i
 
 dq.bsoftlimit = softlimit # 1block = 1024byte (SunOS 5.6, edquota(1M))
 Quota.setquota($DEV, $UID, dq)
+p $DEV
+p $UID
 
 other = Quota.getquota($DEV, $UID)
 print("quota = #{dq.inspect}\n")

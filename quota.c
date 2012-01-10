@@ -404,6 +404,8 @@ rb_quota_setquota(VALUE self, VALUE dev, VALUE uid, VALUE dqb)
   struct dqblk c_dqb;
   rb_diskquota_get(dqb, &c_dqb);
 
+  c_dqb.dqb_valid = QIF_ALL;
+
   if( rb_quotactl(Q_SETQUOTA,c_dev,uid,(caddr_t)(&c_dqb)) == -1 ){
     rb_sys_fail("quotactl");
   };
